@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payroll Pro | Premium Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f0f4f8; }
+        
+        /* Custom UI Elements (No Default Browser Styles) */
+        input, .custom-select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            outline: none !important;
+        }
+
+        /* iOS Style Toggle/Card */
+        .premium-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.06);
+        }
+
+        /* iOS-like Dropdown Container */
+        .select-wrapper {
+            position: relative;
+            cursor: pointer;
+        }
+        .select-options {
+            display: none;
+            position: absolute;
+            top: 110%;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            z-index: 50;
+            overflow: hidden;
+            border: 1px solid #edf2f7;
+        }
+        .select-options.active { display: block; }
+        .option-item {
+            padding: 12px 16px;
+            transition: all 0.2s;
+        }
+        .option-item:hover { background: #f8fafc; color: #2563eb; }
+
+        .btn-ios {
+            background: #007AFF;
+            border-radius: 14px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .btn-ios:active { transform: scale(0.96); opacity: 0.9; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-lg">
+        <div class="premium-card p-8">
+            <h1 class="text-2xl font-bold text-slate-800 text-center mb-1">Payroll System</h1>
+            <p class="text-slate-400 text-sm text-center mb-8 font-medium">Professional Daily Calculation</p>
+
+            <div class="space-y-6">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider ml-1">Dari</label>
+                        <input type="date" id="startDate" class="w-full mt-1 px-4 py-3 bg-slate-50 border-none rounded-xl text-slate-700 font-medium focus:ring-2 focus:ring-blue-100 transition-all">
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider ml-1">Sampai</label>
+                        <input type="date" id="endDate" class="w-full mt-1 px-4 py-3 bg-slate-50 border-none rounded-xl text-slate-700 font-medium focus:ring-2 focus:ring-blue-100 transition-all">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider ml-1">Nominal Gaji (Rp)</label>
+                    <input type="text" id="salaryInput" placeholder="1.000" oninput="formatRupiah(this)" 
+                           class="w-full mt-1 px-4 py-4 bg-slate-50 border-none rounded-xl text-lg font-bold text-blue-600 focus:ring-2 focus:ring-blue-100 transition-all">
+                </div>
+
+                <div class="select-wrapper">
+                    <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider ml-1">Sistem Gaji</label>
+                    <div id="customSelect" onclick="toggleDropdown()" class="w-full mt-1 px-4 py-3 bg-slate-50 rounded-xl text-slate-700 font-medium flex justify-between items-center">
+                        <span id="selectedValue">Harian (1 Hari Sekali)</span>
+                        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                    <div id="optionsList" class="select-options font-medium text-slate-600">
+                        <div class="option-item" onclick="selectOption(1, 'Harian (1 Hari Sekali)')">Harian (1 Hari Sekali)</div>
+                        <div class="option-item" onclick="selectOption(2, 'Dua Hari Sekali')">Dua Hari Sekali</div>
+                        <div class="option-item" onclick="selectOption(7, 'Mingguan (7 Hari Sekali)')">Mingguan (7 Hari Sekali)</div>
+                        <div class="option-item" onclick="selectOption(30, 'Bulanan (30 Hari Sekali)')">Bulanan (30 Hari Sekali)</div>
+                    </div>
+                    <input type="hidden" id="paymentCycle" value="1">
+                </div>
+
+                <button onclick="processCalculation()" class="w-full btn-ios text-white font-bold py-4 shadow-xl shadow-blue-200">
+                    Hitung Sekarang
+                </button>
+            </div>
+
+            <div class="mt-8 pt-8 border-t border-slate-100">
+                <div class="text-center">
+                    <p class="text-xs font-bold text-slate-400 uppercase mb-1">Estimasi Total Terima</p>
+                    <h2 class="text-4xl font-extrabold text-slate-800 tracking-tight" id="resTotal">Rp 0</h2>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mt-6">
+                    <div class="bg-blue-50 p-4 rounded-2xl text-center">
+                        <p class="text-[10px] font-bold text-blue-400 uppercase">Per Hari</p>
+                        <p class="text-lg font-bold text-blue-700" id="resDaily">Rp 0</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-2xl text-center">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase">Total Hari</p>
+                        <p class="text-lg font-bold text-slate-700" id="resDays">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <p class="text-center text-slate-400 text-[10px] mt-6 font-bold tracking-[0.2em] uppercase">Built with Premium Standards</p>
+    </div>
+
+    <script>
+        // 1. Logic Format 1.000 (Ribuan)
+        function formatRupiah(input) {
+            let val = input.value.replace(/\D/g, "");
+            input.value = new Intl.NumberFormat('id-ID').format(val);
+            if (input.value === '0') input.value = '';
+        }
+
+        // 2. Custom iOS Dropdown Logic
+        function toggleDropdown() {
+            document.getElementById('optionsList').classList.toggle('active');
+        }
+
+        function selectOption(val, text) {
+            document.getElementById('paymentCycle').value = val;
+            document.getElementById('selectedValue').innerText = text;
+            document.getElementById('optionsList').classList.remove('active');
+        }
+
+        // 3. Calculation Logic
+        function processCalculation() {
+            const startStr = document.getElementById('startDate').value;
+            const endStr = document.getElementById('endDate').value;
+            const rawSalary = document.getElementById('salaryInput').value.replace(/\./g, "");
+            const salary = parseFloat(rawSalary);
+            const cycle = parseInt(document.getElementById('paymentCycle').value);
+
+            if (!startStr || !endStr || isNaN(salary)) {
+                alert("Lengkapi data terlebih dahulu.");
+                return;
+            }
+
+            const start = new Date(startStr);
+            const end = new Date(endStr);
+            
+            if (end < start) {
+                alert("Tanggal akhir tidak valid.");
+                return;
+            }
+
+            const diffTime = Math.abs(end - start);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+            // Fitur Tambahan: Menghitung Pro-rata Harian
+            // Jika gaji bulanan (30 hari), maka per hari = gaji/30
+            const salaryPerDay = salary / cycle;
+
+            // Total gaji berdasarkan siklus pembayaran yang selesai
+            const frequency = Math.floor(diffDays / cycle);
+            const totalSalary = frequency * salary;
+
+            // Tampilkan hasil
+            document.getElementById('resTotal').innerText = "Rp " + new Intl.NumberFormat('id-ID').format(totalSalary);
+            document.getElementById('resDaily').innerText = "Rp " + new Intl.NumberFormat('id-ID').format(Math.round(salaryPerDay));
+            document.getElementById('resDays').innerText = diffDays + " Hari";
+        }
+
+        // Close dropdown when clicking outside
+        window.onclick = function(event) {
+            if (!event.target.closest('.select-wrapper')) {
+                document.getElementById('optionsList').classList.remove('active');
+            }
+        }
+
+        // Default Date
+        window.onload = () => {
+            const now = new Date().toISOString().split('T')[0];
+            document.getElementById('startDate').value = now;
+            document.getElementById('endDate').value = now;
+        };
+    </script>
+</body>
+</html>
